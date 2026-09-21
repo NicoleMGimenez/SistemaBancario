@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CajaAhorroImpl implements CajaAhorroService{
+public class CajaAhorroServiceImpl implements CajaAhorroService{
 	
 	private final CajaAhorroRepository cajaAhorroRepository;
 
