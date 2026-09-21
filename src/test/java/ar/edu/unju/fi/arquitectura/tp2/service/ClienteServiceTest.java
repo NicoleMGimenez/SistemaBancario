@@ -48,7 +48,7 @@ public class ClienteServiceTest {
 		
 		assertNotNull(resultado, "El cliente retornado no debería ser nulo");
         assertEquals(clienteId, resultado.getCuil());
-        assertEquals("", resultado.getnombreRazonSocial());
+        assertEquals("", resultado.getNombreRazonSocial());
         
         verify(clienteRepository, times(1)).findByCuil(cuil);
 	}

@@ -41,7 +41,11 @@ public class ClienteServiceImpl implements ClienteService{
 	public List<Cliente> obtenerPorNombre(String Nombre) {
 		// TODO Auto-generated method stub
 		System.out.println("Buscando Cliente por Nombre: "+ Nombre);
-		return (clienteRepository.findByNombreRazonSocialContainingIgnoreCase(Nombre));
+		List<Cliente> respuesta=clienteRepository.findByNombreRazonSocialContainingIgnoreCase(Nombre);
+		if(respuesta.isEmpty()) {
+			System.out.println("Cliente "+ Nombre + " no encontrado");
+		}
+		return respuesta;
 	}
 
 }

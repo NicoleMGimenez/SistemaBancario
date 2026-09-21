@@ -15,4 +15,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     // Búsqueda flexible por nombre
     List<Cliente> findByNombreRazonSocialContainingIgnoreCase(String nombre);
+    
+    //Exite cliente cuil
+    boolean existsByCuil(String cuil);
 }

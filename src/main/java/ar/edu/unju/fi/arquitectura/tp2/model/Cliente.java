@@ -14,6 +14,9 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 
+@Setter
+@Getter
+
 public class Cliente extends Auditoria{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
