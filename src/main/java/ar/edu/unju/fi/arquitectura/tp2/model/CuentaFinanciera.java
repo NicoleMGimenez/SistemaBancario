@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "cuentas_financieras")
@@ -43,6 +44,10 @@ public abstract class CuentaFinanciera extends Auditoria {
             inverseJoinColumns = @JoinColumn(name = "cliente_id")
     )
     private List<Cliente> titulares = new ArrayList<>();
+    
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private Cliente cliente;
 
     @OneToMany(mappedBy = "cuenta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaccion> transacciones = new ArrayList<>();
