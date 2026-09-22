@@ -22,7 +22,7 @@ public class ClienteServiceImpl implements ClienteService{
 		// TODO Auto-generated method stub
 		System.out.println("Iniciando proceso de creación de cliente con CUIL: " + cliente.getCuil());
 		
-		if(clienteRepository.existBycuil(cliente.getCuil())) {
+		if(clienteRepository.existsByCuil(cliente.getCuil())) {
 			System.out.println("Fallo en la creacion, ya existe un registro con el cuil: "+cliente.getCuil());
 			throw new IllegalArgumentException("Ya existe un cliente registrado con el mismo CUIL o Email.");
 		}

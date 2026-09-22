@@ -1,7 +1,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE transacciones;
-TRUNCATE TABLE cuentas_bancarias;
+TRUNCATE TABLE cuentas_financieras;
 TRUNCATE TABLE clientes;
 
 SET FOREIGN_KEY_CHECKS = 1;
