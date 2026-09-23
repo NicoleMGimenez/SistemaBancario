@@ -34,23 +34,23 @@ public class ClienteServiceTest {
 	@DisplayName("Debe retornar un cliente cuando el Cuil existe")
 	void obtenerPorCuil_CuandoClienteExiste_DebeRetornarCliente() {
 		
-		String cuil="";
-		Cliente clienteEsperado= Cliente.builder()
-				.cuil(cuil)
-				.nombreRazonSocial()
-				.cuil()
-				.email()
-				.build();
+		Long clienteId = 1L;
+        Cliente clienteEsperado = Cliente.builder()
+                .id(clienteId)
+                .nombre("david gomez")
+                .cuil("20351234567")
+                .email("david@email.com")
+                .build();
 		
-		when(clienteRepository.findByCuil(cuil)).thenReturn(Optional.of(clienteEsperado));
+        when(clienteRepository.findByCuil(clienteEsperado.getCuil())).thenReturn(Optional.of(clienteEsperado));
 		
-		Cliente resultado = clienteServiceImpl.obtenerPorCuil(cuil);
+		Cliente resultado = clienteServiceImpl.obtenerPorCuil(clienteEsperado.getCuil());
 		
 		assertNotNull(resultado, "El cliente retornado no debería ser nulo");
-        assertEquals(cuil, resultado.getCuil());
-        assertEquals(clienteEsperado.getNombreRazonSocial, resultado.getNombreRazonSocial());
+        assertEquals(clienteEsperado.getCuil(), resultado.getCuil());
+        assertEquals(clienteEsperado.getNombreRazonSocial(), resultado.getNombreRazonSocial());
         
-        verify(clienteRepository, times(1)).findByCuil(cuil);
+        verify(clienteRepository, times(1)).findByCuil(clienteEsperado.getCuil());
 	}
 	
 	
