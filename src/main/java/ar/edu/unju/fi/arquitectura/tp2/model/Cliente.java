@@ -6,26 +6,26 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "clientes")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class Cliente extends Auditoria {
 
-@Setter
-@Getter
-
-public class Cliente extends Auditoria{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "nombre_razon_social", nullable = false, length = 150)
     private String nombreRazonSocial;
 
     @Column(nullable = false, unique = true, length = 11)
+    @EqualsAndHashCode.Include
     private String cuil;
 
     @Column(nullable = false, unique = true, length = 100)
@@ -38,5 +38,6 @@ public class Cliente extends Auditoria{
     private String direccion;
 
     @ManyToMany(mappedBy = "titulares", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<CuentaFinanciera> cuentas = new ArrayList<>();
 }
