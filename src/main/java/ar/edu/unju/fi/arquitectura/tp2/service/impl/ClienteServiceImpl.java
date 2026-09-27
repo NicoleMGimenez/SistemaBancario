@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import ar.edu.unju.fi.arquitectura.tp2.dto.ClienteRequestDto;
 import ar.edu.unju.fi.arquitectura.tp2.dto.ClienteResponseDto;
 import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaResponseDto;
+import ar.edu.unju.fi.arquitectura.tp2.exception.RecursoNoEncontradoException;
 import ar.edu.unju.fi.arquitectura.tp2.model.Cliente;
 import ar.edu.unju.fi.arquitectura.tp2.model.CuentaFinanciera;
 import ar.edu.unju.fi.arquitectura.tp2.repository.ClienteRepository;
@@ -62,9 +63,7 @@ public class ClienteServiceImpl implements ClienteService{
 
 	    Cliente cliente = clienteRepository.findByCuil(cuil)
 	            .orElseThrow(() ->
-	                    new IllegalArgumentException(
-	                            "Cliente no encontrado con el CUIL: " + cuil
-	                    )
+	                    new RecursoNoEncontradoException("Cliente no encontrado con el CUIL: " + cuil)
 	            );
 	    return ClienteResponseDto.builder()
 	            .id(cliente.getId())

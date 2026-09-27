@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaRequestDto;
 import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaResponseDto;
+import ar.edu.unju.fi.arquitectura.tp2.exception.RecursoNoEncontradoException;
 import ar.edu.unju.fi.arquitectura.tp2.model.CuentaFinanciera;
 import ar.edu.unju.fi.arquitectura.tp2.model.EstadoCuenta;
 import ar.edu.unju.fi.arquitectura.tp2.repository.CuentaFinancieraRepository;
@@ -30,7 +31,7 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService{
     public CuentaResponseDto obtenerPorCbu(String cbu) {
 
         CuentaFinanciera cuenta = cuentaFinancieraRepository.findByCbu(cbu)
-                .orElseThrow(() ->new IllegalArgumentException("Cuenta no encontrada con el CBU: " + cbu));
+                .orElseThrow(() ->new RecursoNoEncontradoException("Cuenta no encontrada con el CBU: " + cbu));
 
         return convertirAResponseDto(cuenta);
     }
@@ -52,8 +53,7 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService{
         CuentaFinanciera cuenta = cuentaFinancieraRepository
                 .findByAlias(alias)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Cuenta no encontrada con el alias: " + alias));
+                        new RecursoNoEncontradoException("Cuenta no encontrada con el alias: " + alias));
 
         return convertirAResponseDto(cuenta);
     }
