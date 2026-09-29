@@ -2,6 +2,8 @@ package ar.edu.unju.fi.arquitectura.tp2.service;
 
 import java.util.List;
 
+import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaRequestDto;
+import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaResponseDto;
 import ar.edu.unju.fi.arquitectura.tp2.model.CuentaFinanciera;
 import ar.edu.unju.fi.arquitectura.tp2.model.EstadoCuenta;
 
@@ -9,10 +11,10 @@ public interface CuentaFinancieraService {
 	
 	CuentaFinanciera crearCuentaFinanciera(CuentaFinanciera cuentaFinanciera);
 	
-	CuentaFinanciera obtenerPorCbu(String cbu);
+	CuentaResponseDto obtenerPorCbu(String cbu);
 	
-	CuentaFinanciera obtenerPorAlias(String alias);
+	CuentaResponseDto obtenerPorAlias(String alias);
 	
-	List<CuentaFinanciera> buscarPorEstado(EstadoCuenta estado);
+	List<CuentaResponseDto> buscarPorEstado(EstadoCuenta estado);
 
 }
