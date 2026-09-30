@@ -32,13 +32,14 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService {
     public CuentaResponseDto crearCuentaFinanciera(CuentaRequestDto request) {
         log.info("Creando cuenta de tipo: {}", request.getTipoCuenta());
 
-        // 1. Buscar al cliente
+        // 1. Buscar al cliente titular en la base de datos
         Cliente cliente = clienteRepository.findById(request.getClienteId())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Cliente no encontrado con ID: " + request.getClienteId()));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Cliente no encontrado con ID: " + request.getClienteId()));
 
         CuentaFinanciera cuenta;
 
-        // 2. Resolver la herencia y armar la entidad específica
+        // 2. Instanciar la subclase correspondiente según el discriminador
         if ("CAJA_AHORRO".equalsIgnoreCase(request.getTipoCuenta())) {
             CajaAhorro ca = new CajaAhorro();
             ca.setInteresAnual(request.getInteresAnual());
@@ -59,22 +60,28 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService {
         cuenta.setSaldoOperativo(request.getSaldoOperativo());
         cuenta.setEstado(request.getEstado());
 
-        // Relacionar la cuenta con su cliente principal
-        // cuenta.setCliente(cliente); // Descomentar si la relación es ManyToOne bidireccional desde Cuenta
+        // ASIGNAR EL CLIENTE TITULAR (Resuelve la violación NOT NULL en cliente_id)
+        cuenta.setCliente(cliente);
 
-        // Agregamos al cliente a la lista de titulares de la cuenta
-        cuenta.getTitulares().add(cliente);
-
-        // 4. Persistir a través del DataAccessObject
+        // 4. Persistir a través del repositorio
         CuentaFinanciera cuentaGuardada = cuentaFinancieraRepository.save(cuenta);
 
-        // 5. Instanciar el TransferObject y retornarlo[cite: 12]
+        // 5. Retornar el DTO de respuesta desacoplado
         return convertirAResponseDto(cuentaGuardada);
     }
 
     @Override
     public CuentaResponseDto obtenerPorCbu(String cbu) {
-        return null;
+        log.info("Buscando cuenta por CBU: {}", cbu);
+
+        CuentaFinanciera cuenta = cuentaFinancieraRepository.findByCbu(cbu)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Cuenta no encontrada con el CBU: " + cbu));
+
+        CuentaResponseDto response = convertirAResponseDto(cuenta);
+        log.info("DTO generado para CBU {}: ID={}, Alias={}, Saldo={}",
+                cbu, response.getId(), response.getAlias(), response.getSaldoOperativo());
+
+        return response;
     }
 
     @Override
@@ -92,8 +99,6 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService {
         return convertirAResponseDto(cuenta);
     }
 
-    // ... (mantén tus métodos obtenerPorCbu, buscarPorEstado, obtenerPorAlias igual)
-
     private CuentaResponseDto convertirAResponseDto(CuentaFinanciera cuenta) {
         CuentaResponseDto.CuentaResponseDtoBuilder builder = CuentaResponseDto.builder()
                 .id(cuenta.getId())
@@ -101,9 +106,11 @@ public class CuentaFinancieraServiceImpl implements CuentaFinancieraService {
                 .cbu(cuenta.getCbu())
                 .saldoOperativo(cuenta.getSaldoOperativo())
                 .estado(cuenta.getEstado());
-        // .clienteId(cuenta.getCliente().getId()); // Descomentar según tu modelo
 
-        // Aplicamos "instanceof" para extraer los campos si es una subclase específica
+        if (cuenta.getCliente() != null) {
+            builder.clienteId(cuenta.getCliente().getId());
+        }
+
         if (cuenta instanceof CajaAhorro ca) {
             builder.tipoCuenta("CAJA_AHORRO")
                     .interesAnual(ca.getInteresAnual())

@@ -22,7 +22,7 @@ public class CuentaResponseDto {
     private EstadoCuenta estado;
     private Long clienteId;
 
-    // Campos específicos que se llenarán según corresponda
+    // Campos de subclases
     private BigDecimal interesAnual;
     private Integer cupoExtraccion;
     private BigDecimal margen;
