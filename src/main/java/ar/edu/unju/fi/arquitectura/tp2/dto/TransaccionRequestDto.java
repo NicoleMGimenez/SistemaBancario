@@ -6,25 +6,29 @@ import java.time.LocalDateTime;
 import ar.edu.unju.fi.arquitectura.tp2.model.EstadoTransaccion;
 import ar.edu.unju.fi.arquitectura.tp2.model.TipoTransaccion;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Positive;
+import lombok.*;
 
-
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class TransaccionRequestDto {
-	
-	@NotNull
+
+    @NotNull(message = "El ID de la cuenta es obligatorio")
+    private Long cuentaId;
+
+    @NotNull(message = "La fecha y hora es obligatoria")
     private LocalDateTime fechaHora;
 
-    @NotNull
+    @NotNull(message = "El monto es obligatorio")
+    @Positive(message = "El monto debe ser mayor a cero")
     private BigDecimal monto;
 
-    @NotNull
-    @Size(max = 30)
+    @NotNull(message = "El tipo de transacción es obligatorio")
     private TipoTransaccion tipo;
 
-    @NotNull
-    @Size(max = 20)
+    @NotNull(message = "El estado de la transacción es obligatorio")
     private EstadoTransaccion estado;
-
-    
-
 }

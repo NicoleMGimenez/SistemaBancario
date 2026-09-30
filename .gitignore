@@ -51,3 +51,5 @@ Thumbs.db
 
 # Logs de ejecución
 *.log
+
+.yaml
