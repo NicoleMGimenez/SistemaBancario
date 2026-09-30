@@ -52,4 +52,5 @@ Thumbs.db
 # Logs de ejecución
 *.log
 
-.yaml
+# Archivo yaml
+src/main/resources/application.yaml
