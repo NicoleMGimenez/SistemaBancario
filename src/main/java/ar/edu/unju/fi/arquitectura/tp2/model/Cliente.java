@@ -40,4 +40,14 @@ public class Cliente extends Auditoria {
     @ManyToMany(mappedBy = "titulares", fetch = FetchType.LAZY)
     @Builder.Default
     private List<CuentaFinanciera> cuentas = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rol_familiar", nullable = false)
+    @Builder.Default
+    private RolFamiliar rolFamiliar = RolFamiliar.TITULAR;
+
+    // Si es adherente, apunta a su titular. Si es titular, este campo queda en null.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "titular_id")
+    private Cliente titular;
 }

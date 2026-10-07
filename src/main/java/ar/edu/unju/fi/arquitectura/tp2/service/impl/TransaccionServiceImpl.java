@@ -1,8 +1,11 @@
 package ar.edu.unju.fi.arquitectura.tp2.service.impl;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
+import ar.edu.unju.fi.arquitectura.tp2.exception.TopeDiarioSuperadoException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,14 +15,19 @@ import ar.edu.unju.fi.arquitectura.tp2.dto.TransferenciaRequestDto;
 import ar.edu.unju.fi.arquitectura.tp2.dto.TransferenciaResponseDto;
 import ar.edu.unju.fi.arquitectura.tp2.exception.RecursoNoEncontradoException;
 import ar.edu.unju.fi.arquitectura.tp2.exception.SaldoInsuficienteException;
+import ar.edu.unju.fi.arquitectura.tp2.exception.TopeDiarioSuperadoException;
+import ar.edu.unju.fi.arquitectura.tp2.model.Cliente;
 import ar.edu.unju.fi.arquitectura.tp2.model.CuentaCorriente;
 import ar.edu.unju.fi.arquitectura.tp2.model.CuentaFinanciera;
 import ar.edu.unju.fi.arquitectura.tp2.model.EstadoCuenta;
 import ar.edu.unju.fi.arquitectura.tp2.model.EstadoTransaccion;
+import ar.edu.unju.fi.arquitectura.tp2.model.RolFamiliar;
 import ar.edu.unju.fi.arquitectura.tp2.model.TipoTransaccion;
 import ar.edu.unju.fi.arquitectura.tp2.model.Transaccion;
+import ar.edu.unju.fi.arquitectura.tp2.repository.ClienteRepository;
 import ar.edu.unju.fi.arquitectura.tp2.repository.CuentaFinancieraRepository;
 import ar.edu.unju.fi.arquitectura.tp2.repository.TransaccionRepository;
+import ar.edu.unju.fi.arquitectura.tp2.service.ParametroSistemaService;
 import ar.edu.unju.fi.arquitectura.tp2.service.TransaccionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,21 +39,37 @@ public class TransaccionServiceImpl implements TransaccionService {
 
     private final TransaccionRepository transaccionRepository;
     private final CuentaFinancieraRepository cuentaFinancieraRepository;
+    private final ClienteRepository clienteRepository;
+    private final ParametroSistemaService parametroService;
 
     @Override
     @Transactional
     public TransaccionResponseDto crearTransaccion(TransaccionRequestDto request) {
-        log.info("Procesando transacción unitaria de tipo: {} por un monto de: {}", request.getTipo(), request.getMonto());
+        log.info("Procesando transacción de tipo: {} por un monto de: {}", request.getTipo(), request.getMonto());
 
-        // 1. Validamos existencia del recurso
+        // 1. Validar existencia de la cuenta
         CuentaFinanciera cuenta = cuentaFinancieraRepository.findById(request.getCuentaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "Cuenta financiera no encontrada con ID: " + request.getCuentaId()));
 
-        // 2. Si la operación debita fondos, validamos saldo y margen
-        if (request.getTipo() == TipoTransaccion.EXTRACCION ||
-                request.getTipo() == TipoTransaccion.TRANSFERENCIA_ENVIADA) {
+        // 2. Validar existencia del cliente operador
+        Cliente operador = clienteRepository.findById(request.getClienteOperadorId())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Cliente operador no encontrado con ID: " + request.getClienteOperadorId()));
 
+        // 3. Regla de Negocio: Restricción de operaciones para Adherentes
+        if (operador.getRolFamiliar() != RolFamiliar.TITULAR && request.getTipo() != TipoTransaccion.EXTRACCION) {
+            throw new IllegalArgumentException("Los adherentes (" + operador.getRolFamiliar() +
+                    ") solo tienen autorización para realizar operaciones de EXTRACCION");
+        }
+
+        // 4. Regla de Negocio: Control de Topes Diarios Globales (para Extracciones)
+        if (request.getTipo() == TipoTransaccion.EXTRACCION) {
+            validarTopeDiarioExtraccion(operador, request.getMonto());
+        }
+
+        // 5. Validación de Saldo y Margen en débitos
+        if (request.getTipo() == TipoTransaccion.EXTRACCION || request.getTipo() == TipoTransaccion.TRANSFERENCIA_ENVIADA) {
             BigDecimal fondosDisponibles = cuenta.getSaldoOperativo();
 
             if (cuenta instanceof CuentaCorriente cc && cc.getMargen() != null) {
@@ -53,39 +77,68 @@ public class TransaccionServiceImpl implements TransaccionService {
             }
 
             if (request.getMonto().compareTo(fondosDisponibles) > 0) {
-                log.warn("Fondos insuficientes en la cuenta ID: {}. Disponibles: {}, Requeridos: {}",
-                        cuenta.getId(), fondosDisponibles, request.getMonto());
                 throw new SaldoInsuficienteException(
-                        "Fondos insuficientes: el saldo operativo y margen disponible ($" +
-                                fondosDisponibles + ") no cubren el monto a debitar ($" + request.getMonto() + ")");
+                        "Fondos insuficientes: el disponible ($" + fondosDisponibles +
+                                ") no cubre el débito ($" + request.getMonto() + ")");
             }
 
             cuenta.setSaldoOperativo(cuenta.getSaldoOperativo().subtract(request.getMonto()));
             cuentaFinancieraRepository.save(cuenta);
-        } else if (request.getTipo() == TipoTransaccion.DEPOSITO ||
-                request.getTipo() == TipoTransaccion.TRANSFERENCIA_RECIBIDA) {
+        } else if (request.getTipo() == TipoTransaccion.DEPOSITO || request.getTipo() == TipoTransaccion.TRANSFERENCIA_RECIBIDA) {
             cuenta.setSaldoOperativo(cuenta.getSaldoOperativo().add(request.getMonto()));
             cuentaFinancieraRepository.save(cuenta);
         }
 
-        // 3. Crear y persistir la transacción vinculada a la cuenta
+        // 6. Persistir la transacción con el operador asociado
         Transaccion transaccion = Transaccion.builder()
                 .cuenta(cuenta)
+                .clienteOperador(operador)
                 .fechaHora(request.getFechaHora())
                 .monto(request.getMonto())
                 .tipo(request.getTipo())
                 .estado(request.getEstado())
                 .build();
 
-        Transaccion transaccionGuardada = transaccionRepository.save(transaccion);
+        Transaccion guardada = transaccionRepository.save(transaccion);
 
         return TransaccionResponseDto.builder()
-                .id(transaccionGuardada.getId())
-                .fechaHora(transaccionGuardada.getFechaHora())
-                .monto(transaccionGuardada.getMonto())
-                .tipo(transaccionGuardada.getTipo())
-                .estado(transaccionGuardada.getEstado())
+                .id(guardada.getId())
+                .fechaHora(guardada.getFechaHora())
+                .monto(guardada.getMonto())
+                .tipo(guardada.getTipo())
+                .estado(guardada.getEstado())
                 .build();
+    }
+
+    private void validarTopeDiarioExtraccion(Cliente operador, BigDecimal montoAExtraer) {
+        // Determinar el parámetro según el rol familiar
+        String claveParametro = (operador.getRolFamiliar() == RolFamiliar.TITULAR)
+                ? "TOPE_DIARIO_TITULAR"
+                : "TOPE_DIARIO_ADHERENTE";
+
+        BigDecimal limitePorDefecto = (operador.getRolFamiliar() == RolFamiliar.TITULAR)
+                ? new BigDecimal("100000.00")
+                : new BigDecimal("70000.00");
+
+        BigDecimal topeMaximo = parametroService.obtenerValorDecimal(claveParametro, limitePorDefecto);
+
+        // Calcular lo extraído hoy (entre las 00:00:00 y las 23:59:59)
+        LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+        LocalDateTime finDia = LocalDate.now().atTime(LocalTime.MAX);
+
+        BigDecimal acumuladoHoy = transaccionRepository.calcularTotalExtraidoEnElDia(
+                operador.getId(), inicioDia, finDia);
+
+        BigDecimal acumuladoProyectado = acumuladoHoy.add(montoAExtraer);
+
+        if (acumuladoProyectado.compareTo(topeMaximo) > 0) {
+            log.warn("Tope diario excedido para el usuario ID {}. Acumulado: ${}, Solicitado: ${}, Tope: ${}",
+                    operador.getId(), acumuladoHoy, montoAExtraer, topeMaximo);
+            throw new TopeDiarioSuperadoException(
+                    "Operación rechazada: la extracción solicitada ($" + montoAExtraer +
+                            ") supera el tope diario permitido para " + operador.getRolFamiliar() +
+                            " ($" + topeMaximo + "). Ya ha extraído hoy: $" + acumuladoHoy);
+        }
     }
 
     @Override

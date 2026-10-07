@@ -38,4 +38,8 @@ public class Transaccion extends Auditoria {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cuenta_id", nullable = false)
     private CuentaFinanciera cuenta;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_operador_id")
+    private Cliente clienteOperador;
 }

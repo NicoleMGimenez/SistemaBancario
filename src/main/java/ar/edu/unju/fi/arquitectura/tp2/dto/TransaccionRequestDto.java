@@ -31,4 +31,7 @@ public class TransaccionRequestDto {
 
     @NotNull(message = "El estado de la transacción es obligatorio")
     private EstadoTransaccion estado;
+
+    @NotNull(message = "El ID del cliente que opera es obligatorio")
+    private Long clienteOperadorId;
 }
