@@ -1,24 +1,24 @@
 package ar.edu.unju.fi.arquitectura.tp2.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "transacciones")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
+public class Transaccion extends Auditoria {
 
-public class Transaccion extends Auditoria{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "fecha_hora", nullable = false)
@@ -38,4 +38,8 @@ public class Transaccion extends Auditoria{
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cuenta_id", nullable = false)
     private CuentaFinanciera cuenta;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_operador_id")
+    private Cliente clienteOperador;
 }
