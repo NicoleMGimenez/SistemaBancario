@@ -50,4 +50,9 @@ public class Cliente extends Auditoria {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "titular_id")
     private Cliente titular;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    @Builder.Default
+    private EstadoCliente estado = EstadoCliente.PENDIENTE_ACTIVACION;
 }

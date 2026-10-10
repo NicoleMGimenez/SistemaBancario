@@ -10,6 +10,8 @@ import ar.edu.unju.fi.arquitectura.tp2.dto.ClienteResponseDto;
 import ar.edu.unju.fi.arquitectura.tp2.service.ClienteService;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/clientes")
 @RequiredArgsConstructor
@@ -21,5 +23,11 @@ public class ClienteController {
 	public ResponseEntity<ClienteResponseDto> crearCliente(@Valid @RequestBody ClienteRequestDto request) {
 		ClienteResponseDto nuevoCliente = clienteService.crearCliente(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(nuevoCliente);
+	}
+
+	@GetMapping("/activar")
+	public ResponseEntity<Map<String, String>> activarCuenta(@RequestParam("token") String token) {
+		String mensaje = clienteService.activarClientePorToken(token);
+		return ResponseEntity.ok(Map.of("mensaje", mensaje, "estado", "ACTIVO"));
 	}
 }

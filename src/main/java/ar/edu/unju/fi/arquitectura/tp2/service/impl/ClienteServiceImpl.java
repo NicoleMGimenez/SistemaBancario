@@ -1,16 +1,19 @@
 package ar.edu.unju.fi.arquitectura.tp2.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
+import ar.edu.unju.fi.arquitectura.tp2.event.ClienteRegistradoEvent;
+import ar.edu.unju.fi.arquitectura.tp2.model.*;
+import ar.edu.unju.fi.arquitectura.tp2.repository.TokenActivacionRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import ar.edu.unju.fi.arquitectura.tp2.dto.ClienteRequestDto;
 import ar.edu.unju.fi.arquitectura.tp2.dto.ClienteResponseDto;
-import ar.edu.unju.fi.arquitectura.tp2.dto.CuentaResponseDto;
 import ar.edu.unju.fi.arquitectura.tp2.exception.RecursoNoEncontradoException;
-import ar.edu.unju.fi.arquitectura.tp2.model.Cliente;
-import ar.edu.unju.fi.arquitectura.tp2.model.CuentaFinanciera;
 import ar.edu.unju.fi.arquitectura.tp2.repository.ClienteRepository;
 import ar.edu.unju.fi.arquitectura.tp2.service.ClienteService;
 import lombok.RequiredArgsConstructor;
@@ -22,38 +25,42 @@ import lombok.extern.slf4j.Slf4j;
 public class ClienteServiceImpl implements ClienteService{
 	
 	private final ClienteRepository clienteRepository;
+	private final TokenActivacionRepository tokenRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
+	@Transactional
 	public ClienteResponseDto crearCliente(ClienteRequestDto request) {
+		// 1. Instanciar la entidad en estado PENDIENTE_ACTIVACION
+		Cliente cliente = Cliente.builder()
+				.nombreRazonSocial(request.getNombreRazonSocial())
+				.cuil(request.getCuil())
+				.email(request.getEmail())
+				.telefono(request.getTelefono())
+				.direccion(request.getDireccion())
+				.estado(EstadoCliente.PENDIENTE_ACTIVACION)
+				.rolFamiliar(RolFamiliar.TITULAR)
+				.build();
 
-	    log.info("Iniciando proceso de creación de cliente con CUIL: {}", request.getCuil());
+		Cliente clienteGuardado = clienteRepository.save(cliente);
 
-	    if (clienteRepository.existsByCuil(request.getCuil())) {
-	        log.info("Fallo en la creación, ya existe un cliente con CUIL: {}", request.getCuil());
+		// 2. Generar Token UUID con vigencia de 24 horas
+		String tokenStr = UUID.randomUUID().toString();
+		TokenActivacion token = TokenActivacion.builder()
+				.token(tokenStr)
+				.cliente(clienteGuardado)
+				.fechaExpiracion(LocalDateTime.now().plusHours(24))
+				.build();
+		tokenRepository.save(token);
 
-	        throw new IllegalArgumentException(
-	                "Ya existe un cliente registrado con el mismo CUIL o Email."
-	        );
-	    }
+		// 3. Publicar evento asíncrono de dominio
+		eventPublisher.publishEvent(new ClienteRegistradoEvent(
+				clienteGuardado.getEmail(),
+				clienteGuardado.getNombreRazonSocial(),
+				tokenStr
+		));
 
-	    Cliente cliente = Cliente.builder()
-	            .nombreRazonSocial(request.getNombreRazonSocial())
-	            .cuil(request.getCuil())
-	            .email(request.getEmail())
-	            .telefono(request.getTelefono())
-	            .direccion(request.getDireccion())
-	            .build();
-
-	    Cliente clienteGuardado = clienteRepository.save(cliente);
-
-	    return ClienteResponseDto.builder()
-	            .id(clienteGuardado.getId())
-	            .nombreRazonSocial(clienteGuardado.getNombreRazonSocial())
-	            .cuil(clienteGuardado.getCuil())
-	            .email(clienteGuardado.getEmail())
-	            .telefono(clienteGuardado.getTelefono())
-	            .direccion(clienteGuardado.getDireccion())
-	            .build();
+		return convertirAResponseDto(clienteGuardado);
 	}
 
 	@Override
@@ -90,6 +97,7 @@ public class ClienteServiceImpl implements ClienteService{
                 .map(this::convertirAResponseDto)
                 .toList();
 	}
+
 	private ClienteResponseDto convertirAResponseDto(Cliente cliente) {
 
 		 return ClienteResponseDto.builder()
@@ -101,5 +109,32 @@ public class ClienteServiceImpl implements ClienteService{
         .direccion(cliente.getDireccion())
         .build();
     }
+
+	@Transactional
+	@Override
+	public String activarClientePorToken(String tokenStr) {
+		TokenActivacion token = tokenRepository.findByToken(tokenStr)
+				.orElseThrow(() -> new IllegalArgumentException("El token de activación no existe"));
+
+		if (token.estaUtilizado()) {
+			throw new IllegalArgumentException("El token ya ha sido utilizado previamente");
+		}
+
+		if (token.estaExpirado()) {
+			throw new IllegalArgumentException("El token ha expirado. Solicite un nuevo enlace de activación");
+		}
+
+		// Marcar token como utilizado
+		token.setFechaUtilizacion(LocalDateTime.now());
+		tokenRepository.save(token);
+
+		// Activar al cliente
+		Cliente cliente = token.getCliente();
+		cliente.setEstado(EstadoCliente.ACTIVO);
+		clienteRepository.save(cliente);
+
+		log.info("Cliente {} (ID: {}) activado exitosamente.", cliente.getNombreRazonSocial(), cliente.getId());
+		return "Cuenta activada exitosamente para " + cliente.getNombreRazonSocial();
+	}
 
 }

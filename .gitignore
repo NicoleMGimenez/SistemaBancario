@@ -54,3 +54,9 @@ Thumbs.db
 
 # Archivo yaml
 src/main/resources/application.yaml
+
+#Variables secretas
+secret.properties
+
+# Scripts SQL
+src/main/resources/*.sql
